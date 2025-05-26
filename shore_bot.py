@@ -67,19 +67,19 @@ def download_file():
         for i,url in enumerate(urls):
             driver.get(url)
             time.sleep(1)
-            driver.save_screenshot("shore_before.png")
+            # driver.save_screenshot("shore_before.png")
             if i == 0:
                 cookie_btn = driver.find_element(By.CSS_SELECTOR , '.js-accept')
                 driver.execute_script("arguments[0].click();", cookie_btn)
                 time.sleep(2)
-                driver.save_screenshot("shore_after_cookie.png")
+                # driver.save_screenshot("shore_after_cookie.png")
             # WebDriverWait(driver, 10).until(
             #     EC.presence_of_element_located((By.CSS_SELECTOR, 'a.uk-button-primary'))
             # )
             footer = driver.find_element(By.ID , 'builderwidget-3')
             driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", footer)
             time.sleep(2)
-            driver.save_screenshot("shore_footer.png")
+            # driver.save_screenshot("shore_footer.png")
             if url == "https://shorewinner.eu/reports-and-publications/":
                 btns = driver.find_elements(By.LINK_TEXT, 'View as PDF')
                 print('found: ' + str(len(btns)))
