@@ -61,7 +61,11 @@ def download_file():
 
     urls = [
         "https://shorewinner.eu/reports-and-publications/",
-        "https://shorewinner.eu/dgfdg/"
+        "https://shorewinner.eu/dgfdg/",
+        "https://shorewinner.eu/shorewinner-newsletter-1/",
+        "https://shorewinner.eu/shorewinner-newsletter-2/",
+        "https://shorewinner.eu/join-the-shorewinner-platform-a-new-networking-hub-for-offshore-renewable-energy-professionals/",
+        "https://shorewinner.eu/info-sheet/"
     ]
     try:
         for i,url in enumerate(urls):
@@ -83,8 +87,11 @@ def download_file():
             if url == "https://shorewinner.eu/reports-and-publications/":
                 btns = driver.find_elements(By.LINK_TEXT, 'View as PDF')
                 print('found: ' + str(len(btns)))
-            else:
+            elif url == "https://shorewinner.eu/dgfdg/":
                 btns = driver.find_elements(By.LINK_TEXT, 'Download as PDF')
+                print('found: ' + str(len(btns)))
+            else:
+                btns = driver.find_elements(By.LINK_TEXT, 'Download')
                 print('found: ' + str(len(btns)))
 
             try:
