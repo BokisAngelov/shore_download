@@ -14,7 +14,8 @@ import undetected_chromedriver as uc
 import os
 import shutil
 
-from seleniumwire import webdriver  
+from seleniumwire import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
 
 
 def initial_proxy_driver():
@@ -60,50 +61,88 @@ def initial_proxy_driver():
 
     return driver
 
+
 def initial_download_driver(headless=True):
     options = Options()
     if headless:
+        # Chrome 109+ new headless
         options.add_argument("--headless=new")
 
     download_dir = os.path.join(os.getcwd(), "asd_downloads")
-    # Create download directory if it doesn't exist
     os.makedirs(download_dir, exist_ok=True)
-    print("dir: " + download_dir)
-    # download_dir = "D:\Desktop\Bokis\ForMe\Python\Projects\qa_crew\shore_downloads"
-    
-    options.add_argument("start-maximized")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36")
+    print("dir:", download_dir)
+
+    options.add_argument("--start-maximized")
+    options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+    )
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
-    options.add_experimental_option('prefs', {
-        "download.default_directory": download_dir, 
-        "download.prompt_for_download": False,
-        "download.directory_upgrade": True,
-        "plugins.always_open_pdf_externally": True
-    })
-    service = webdriver.ChromeService(log_output='selenium.log')
-    driver = webdriver.Chrome(options=options, service=service)
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    options.add_experimental_option(
+        "prefs",
+        {
+            "download.default_directory": download_dir,
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "plugins.always_open_pdf_externally": True,
+        },
+    )
+
+    # Create the Selenium Service correctly (from selenium.webdriver, not seleniumwire)
+    try:
+        # Newer Selenium: supports log_output (file-like or path)
+        service = ChromeService(log_output=open("selenium.log", "w"))
+    except TypeError:
+        # Older Selenium: fallback to log_path
+        service = ChromeService(log_path="selenium.log")
+
+    # Use Selenium Wire's Chrome but pass the Selenium Service + Options
+    driver = webdriver.Chrome(service=service, options=options)
+
+    # Hide webdriver flag (some sites detect automation)
+    driver.execute_script(
+        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+    )
+
+    # (Optional) For older Chrome headless, ensure downloads are allowed via CDP:
+    try:
+        driver.execute_cdp_cmd(
+            "Page.setDownloadBehavior",
+            {"behavior": "allow", "downloadPath": download_dir},
+        )
+    except Exception:
+        pass
 
     return driver
+
 
 def initial_general_driver():
     options = Options()
     options.add_argument("start-maximized")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36")
+    options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
+    )
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
-    options.add_experimental_option('prefs', {
-        "download.prompt_for_download": False,
-        "download.directory_upgrade": True,
-        "plugins.always_open_pdf_externally": True
-    })
+    options.add_experimental_option(
+        "prefs",
+        {
+            "download.prompt_for_download": False,
+            "download.directory_upgrade": True,
+            "plugins.always_open_pdf_externally": True,
+        },
+    )
     driver = webdriver.Chrome(options=options)
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    driver.execute_script(
+        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+    )
 
     return driver
+
+
 def asd_unique_bot():
     driver = initial_proxy_driver()
     try:
@@ -116,7 +155,9 @@ def asd_unique_bot():
     finally:
         driver.quit()
 
+
 asd_unique_bot()
+
 
 def asd_visitor():
     driver = initial_general_driver()
@@ -124,25 +165,27 @@ def asd_visitor():
         driver.get("https://asdinpreschool.eu")
         time.sleep(2)
         menu_items = driver.find_elements(By.CLASS_NAME, "uk-navbar-nav li a")
-        for i,item in enumerate(menu_items):
-            print(i,item.text)
+        for i, item in enumerate(menu_items):
+            print(i, item.text)
             item.click()
             time.sleep(2)
             driver.back()
             time.sleep(2)
-            
+
     except Exception as e:
         print(e)
     finally:
         driver.quit()
-    
+
+
 asd_visitor()
+
 
 def asd_download():
     driver = initial_download_driver()
     try:
         driver.get("https://asdinpreschool.eu/resources/")
-        cookie_btn = driver.find_element(By.CSS_SELECTOR , '.js-accept')
+        cookie_btn = driver.find_element(By.CSS_SELECTOR, ".js-accept")
         driver.execute_script("arguments[0].click();", cookie_btn)
         time.sleep(2)
 
@@ -151,22 +194,24 @@ def asd_download():
             print(item.text)
             # pending download action once we confirm the buttons
 
-
         driver.get("https://asdinpreschool.eu/category/news/")
         time.sleep(2)
 
-        items = driver.find_elements(By.CSS_SELECTOR, '.news-grid .el-item a')
+        items = driver.find_elements(By.CSS_SELECTOR, ".news-grid .el-item a")
         for item in items:
             print(item.text)
             try:
                 driver.execute_script("arguments[0].click();", item)
                 time.sleep(1)
-                download_btn = driver.find_element(By.CSS_SELECTOR, '.inner-newslette-row .el-content.uk-button.uk-button-default')
+                download_btn = driver.find_element(
+                    By.CSS_SELECTOR,
+                    ".inner-newslette-row .el-content.uk-button.uk-button-default",
+                )
                 time.sleep(1)
                 driver.execute_script("arguments[0].click();", download_btn)
                 time.sleep(1)
                 # driver.save_screenshot("asd_news_after.png")
-                print('clicked download btn')
+                print("clicked download btn")
             except Exception as e:
                 print(e)
 
@@ -174,5 +219,6 @@ def asd_download():
         print(e)
     finally:
         driver.quit()
+
 
 asd_download()
