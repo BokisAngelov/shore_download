@@ -5,6 +5,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -13,6 +14,7 @@ import random
 import undetected_chromedriver as uc
 import os
 import shutil
+from urllib.parse import urlparse
 
 from seleniumwire import webdriver  
 
@@ -82,11 +84,25 @@ def initial_download_driver(headless=True):
         "download.directory_upgrade": True,
         "plugins.always_open_pdf_externally": True
     })
-    service = webdriver.ChromeService(log_output='selenium.log')
-    driver = webdriver.Chrome(options=options, service=service)
+    # service = Service(log_output='selenium.log')
+    driver = webdriver.Chrome(options=options)
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
     return driver
+
+def clear_download_directory():
+    download_dir = os.path.join(os.getcwd(), "asd_downloads")
+    if os.path.exists(download_dir):
+        for filename in os.listdir(download_dir):
+            file_path = os.path.join(download_dir, filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f'Error deleting {file_path}: {e}')
+    print('Download directory cleared')
 
 def initial_general_driver():
     options = Options()
@@ -116,7 +132,7 @@ def asd_unique_bot():
     finally:
         driver.quit()
 
-asd_unique_bot()
+# asd_unique_bot()
 
 def asd_visitor():
     driver = initial_general_driver()
@@ -136,7 +152,7 @@ def asd_visitor():
     finally:
         driver.quit()
     
-asd_visitor()
+# asd_visitor()
 
 def asd_download():
     driver = initial_download_driver()
@@ -151,7 +167,6 @@ def asd_download():
             print(item.text)
             # pending download action once we confirm the buttons
 
-
         driver.get("https://asdinpreschool.eu/category/news/")
         time.sleep(2)
 
@@ -159,20 +174,104 @@ def asd_download():
         for item in items:
             print(item.text)
             try:
+                # Get the href attribute to see what URL we're clicking
+                href = item.get_attribute('href')
+                print(f"News item URL: {href}")
+                
                 driver.execute_script("arguments[0].click();", item)
-                time.sleep(1)
-                download_btn = driver.find_element(By.CSS_SELECTOR, '.inner-newslette-row .el-content.uk-button.uk-button-default')
-                time.sleep(1)
-                driver.execute_script("arguments[0].click();", download_btn)
-                time.sleep(1)
-                # driver.save_screenshot("asd_news_after.png")
-                print('clicked download btn')
+                time.sleep(3)  # Increased wait time
+                
+                # Check if we're on the correct page
+                current_url = driver.current_url
+                print(f"Current URL: {current_url}")
+                
+                # Try to find the download button with multiple selectors
+                download_btn = None
+                selectors = [
+                    '.inner-newslette-row .el-content.uk-button.uk-button-default',
+                    '.uk-button.uk-button-default',
+                    'a[href*=".pdf"]',
+                    'a[download]',
+                    'button[onclick*="download"]'
+                ]
+                
+                for selector in selectors:
+                    try:
+                        download_btn = driver.find_element(By.CSS_SELECTOR, selector)
+                        print(f"Found download button with selector: {selector}")
+                        break
+                    except:
+                        continue
+                
+                if download_btn:
+                    # Get the href or download attribute
+                    download_url = download_btn.get_attribute('href')
+                    print(f"Download URL: {download_url}")
+                    
+                    driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", download_btn)
+                    driver.save_screenshot("asd_news_before_click.png")
+                    time.sleep(2)
+                    
+                    download_dir = os.path.join(os.getcwd(), "asd_downloads")
+                    files_before = os.listdir(download_dir) if os.path.exists(download_dir) else []
+                    print(f"Files before click: {files_before}")
+                    
+                    # Try direct download if browser download failed
+                    if download_url and download_url.startswith('http'):
+                        print("Attempting direct download...")
+                        direct_result = download_pdf_direct(download_url)
+                        if direct_result:
+                            print(f"Direct download successful: {direct_result}")
+                        else:
+                            print("Direct download also failed")
+                        
+                        
+                        
+                else:
+                    print("No download button found with any selector")
+                    
             except Exception as e:
                 print(e)
 
     except Exception as e:
         print(e)
     finally:
+        # clear_download_directory()
         driver.quit()
+
+def download_pdf_direct(url, filename=None):
+    try:
+        
+        
+        # Create download directory if it doesn't exist
+        download_dir = os.path.join(os.getcwd(), "asd_downloads")
+        os.makedirs(download_dir, exist_ok=True)
+        
+        # Get filename from URL if not provided
+        if not filename:
+            parsed_url = urlparse(url)
+            filename = os.path.basename(parsed_url.path)
+            if not filename.endswith('.pdf'):
+                filename += '.pdf'
+        
+        file_path = os.path.join(download_dir, filename)
+        
+        print(f"Downloading PDF from: {url}")
+        print(f"Saving to: {file_path}")
+        
+        # Download the file
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        with open(file_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        print(f"Successfully downloaded: {filename}")
+        return file_path
+        
+    except Exception as e:
+        print(f"Error downloading PDF directly: {e}")
+        return None
 
 asd_download()
