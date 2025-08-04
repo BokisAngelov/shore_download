@@ -66,19 +66,16 @@ def initial_proxy_driver():
 
 def initial_download_driver(headless=True):
     options = Options()
-    if headless:
-        # Chrome 109+ new headless
-        options.add_argument("--headless=new")
+    # if headless:
+    #     # Chrome 109+ new headless
+    #     options.add_argument("--headless=new")
 
     download_dir = os.path.join(os.getcwd(), "asd_downloads")
     os.makedirs(download_dir, exist_ok=True)
-    print("dir:", download_dir)
+    # print("dir:", download_dir)
 
-    options.add_argument("--start-maximized")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
-    )
+    options.add_argument("start-maximized")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
@@ -166,7 +163,7 @@ def asd_unique_bot():
     finally:
         driver.quit()
 
-# asd_unique_bot()
+asd_unique_bot()
 
 def asd_visitor():
     driver = initial_general_driver()
@@ -186,7 +183,7 @@ def asd_visitor():
     finally:
         driver.quit()
     
-# asd_visitor()
+asd_visitor()
 
 def asd_download():
     driver = initial_download_driver()
@@ -225,6 +222,8 @@ def asd_download():
                     '.inner-newslette-row .el-content.uk-button.uk-button-default',
                     '.uk-button.uk-button-default',
                     'a[href*=".pdf"]',
+                    'a[download]',
+                    'button[onclick*="download"]'
                 ]
                 
                 for selector in selectors:
@@ -248,14 +247,18 @@ def asd_download():
                     files_before = os.listdir(download_dir) if os.path.exists(download_dir) else []
                     print(f"Files before click: {files_before}")
                     
+                    driver.execute_script("arguments[0].click();", download_btn)
+                    time.sleep(5)
+                    driver.save_screenshot("asd_news_after_click.png")
+                    
                     # Try direct download if browser download failed
-                    if download_url and download_url.startswith('http'):
-                        print("Attempting direct download...")
-                        direct_result = download_pdf_direct(download_url)
-                        if direct_result:
-                            print(f"Direct download successful: {direct_result}")
-                        else:
-                            print("Direct download also failed")
+                    # if download_url and download_url.startswith('http'):
+                    #     print("Attempting direct download...")
+                    #     direct_result = download_pdf_direct(download_url)
+                    #     if direct_result:
+                    #         print(f"Direct download successful: {direct_result}")
+                    #     else:
+                    #         print("Direct download also failed")
                         
                         
                         
@@ -268,41 +271,42 @@ def asd_download():
     except Exception as e:
         print(e)
     finally:
+        time.sleep(2)
         # clear_download_directory()
         driver.quit()
 
-def download_pdf_direct(url, filename=None):
-    try:
+# def download_pdf_direct(url, filename=None):
+    # try:
         
-        # Create download directory if it doesn't exist
-        download_dir = os.path.join(os.getcwd(), "asd_downloads")
-        os.makedirs(download_dir, exist_ok=True)
+    #     # Create download directory if it doesn't exist
+    #     download_dir = os.path.join(os.getcwd(), "asd_downloads")
+    #     os.makedirs(download_dir, exist_ok=True)
         
-        # Get filename from URL if not provided
-        if not filename:
-            parsed_url = urlparse(url)
-            filename = os.path.basename(parsed_url.path)
-            if not filename.endswith('.pdf'):
-                filename += '.pdf'
+    #     # Get filename from URL if not provided
+    #     if not filename:
+    #         parsed_url = urlparse(url)
+    #         filename = os.path.basename(parsed_url.path)
+    #         if not filename.endswith('.pdf'):
+    #             filename += '.pdf'
         
-        file_path = os.path.join(download_dir, filename)
+    #     file_path = os.path.join(download_dir, filename)
         
-        print(f"Downloading PDF from: {url}")
-        print(f"Saving to: {file_path}")
+    #     print(f"Downloading PDF from: {url}")
+    #     print(f"Saving to: {file_path}")
         
-        # Download the file
-        response = requests.get(url, stream=True)
-        response.raise_for_status()
+    #     # Download the file
+    #     response = requests.get(url, stream=True)
+    #     response.raise_for_status()
         
-        with open(file_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
+    #     with open(file_path, 'wb') as f:
+    #         for chunk in response.iter_content(chunk_size=8192):
+    #             f.write(chunk)
         
-        print(f"Successfully downloaded: {filename}")
-        return file_path
+    #     print(f"Successfully downloaded: {filename}")
+    #     return file_path
         
-    except Exception as e:
-        print(f"Error downloading PDF directly: {e}")
-        return None
+    # except Exception as e:
+    #     print(f"Error downloading PDF directly: {e}")
+    #     return None
 
 asd_download()
